@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+// Live Render Backend API URL
+const renderBackendUrl = 'https://mini-erp-crm-portal-4bg4.onrender.com';
+
+const baseURL = import.meta.env.VITE_API_BASE_URL
+  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+  : import.meta.env.PROD
+  ? `${renderBackendUrl}/api`
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
 });
 
 api.interceptors.request.use((config) => {
