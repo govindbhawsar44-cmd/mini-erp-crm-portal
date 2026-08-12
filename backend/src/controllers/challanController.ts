@@ -18,9 +18,8 @@ export const updateStatusSchema = z.object({
   status: z.enum(['DRAFT', 'CONFIRMED', 'CANCELLED']),
 });
 
-// Helper to auto-generate unique Challan number resistant to collisions
 async function generateChallanNumber(): Promise<string> {
-  const dateStr = new Date().toISOString().slice(0, 7).replace('-', ''); // e.g. 202608
+  const dateStr = new Date().toISOString().slice(0, 7).replace('-', '');
   const count = await prisma.salesChallan.count();
   const timestampSuffix = Date.now().toString().slice(-4);
   const seq = (count + 1).toString().padStart(3, '0');
@@ -113,36 +112,43 @@ export const createChallan = async (req: AuthRequest, res: Response) => {
   const { customerId, status, items } = req.body;
   const userId = req.user!.id;
 
-  // Verify Customer exists
+  const validItems = (items || []).filter(
+    (i: any) => i.productId && typeof i.productId === 'string' && i.productId.trim() !== '' && i.quantity > 0
+  );
+
+  if (validItems.length === 0) {
+    res.status(400).json({ message: 'Please select at least one valid product from the catalog.' });
+    return;
+  }
+
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer) {
-    res.status(404).json({ message: 'Customer not found' });
+    res.status(404).json({ message: 'Customer account not found. Please select a valid customer.' });
     return;
   }
 
   const challanNumber = await generateChallanNumber();
 
   try {
-    // Atomic Database Transaction for Creation + Stock Validation + Stock Deduction
     const createdChallan = await prisma.$transaction(async (tx) => {
-      const productIds = items.map((i: any) => i.productId);
+      const productIds = validItems.map((i: any) => i.productId);
       const products = await tx.product.findMany({
         where: { id: { in: productIds } },
       });
 
       const productMap = new Map(products.map((p) => [p.id, p]));
 
-      // Verify all products exist
-      for (const item of items) {
+      for (const item of validItems) {
         if (!productMap.has(item.productId)) {
-          throw new Error(`Product ID '${item.productId}' not found in inventory.`);
+          const err: any = new Error(`Selected product (ID: '${item.productId}') is no longer in catalog.`);
+          err.statusCode = 400;
+          throw err;
         }
       }
 
-      // If status is CONFIRMED, validate stock sufficiency inside transaction
       if (status === 'CONFIRMED') {
         const insufficient: string[] = [];
-        for (const item of items) {
+        for (const item of validItems) {
           const p = productMap.get(item.productId)!;
           if (p.currentStock < item.quantity) {
             insufficient.push(
@@ -159,11 +165,10 @@ export const createChallan = async (req: AuthRequest, res: Response) => {
         }
       }
 
-      // Compute total quantity & amount with snapshots
       let totalQuantity = 0;
       let totalAmount = 0;
 
-      const itemSnapshots = items.map((item: any) => {
+      const itemSnapshots = validItems.map((item: any) => {
         const p = productMap.get(item.productId)!;
         const subtotal = p.unitPrice * item.quantity;
         totalQuantity += item.quantity;
@@ -197,9 +202,8 @@ export const createChallan = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      // Update product stock and log OUT movement inside transaction if CONFIRMED
       if (status === 'CONFIRMED') {
-        for (const item of items) {
+        for (const item of validItems) {
           const p = productMap.get(item.productId)!;
 
           await tx.product.update({
@@ -260,14 +264,12 @@ export const updateChallanStatus = async (req: AuthRequest, res: Response) => {
         return { message: `Challan is already in '${targetStatus}' status`, challan: existing };
       }
 
-      // Prevent re-confirming already confirmed or cancelled challan
       if (existing.status === 'CONFIRMED' && targetStatus === 'CONFIRMED') {
         const err: any = new Error('Challan is already confirmed. Duplicate confirmation blocked.');
         err.statusCode = 400;
         throw err;
       }
 
-      // Transition DRAFT -> CONFIRMED
       if (existing.status === 'DRAFT' && targetStatus === 'CONFIRMED') {
         const productIds = existing.items.map((i) => i.productId);
         const products = await tx.product.findMany({
@@ -321,7 +323,6 @@ export const updateChallanStatus = async (req: AuthRequest, res: Response) => {
         };
       }
 
-      // Transition CONFIRMED -> CANCELLED (Restores Stock)
       if (existing.status === 'CONFIRMED' && targetStatus === 'CANCELLED') {
         const updated = await tx.salesChallan.update({
           where: { id },
@@ -352,7 +353,6 @@ export const updateChallanStatus = async (req: AuthRequest, res: Response) => {
         };
       }
 
-      // DRAFT -> CANCELLED
       const updated = await tx.salesChallan.update({
         where: { id },
         data: { status: targetStatus },
