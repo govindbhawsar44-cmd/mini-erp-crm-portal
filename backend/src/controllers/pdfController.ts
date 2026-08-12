@@ -6,7 +6,8 @@ export const exportChallanPDF = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const challan = await prisma.salesChallan.findUnique({
+    // Search by primary UUID id or by challanNumber
+    let challan = await prisma.salesChallan.findUnique({
       where: { id },
       include: {
         customer: true,
@@ -16,19 +17,35 @@ export const exportChallanPDF = async (req: Request, res: Response) => {
     });
 
     if (!challan) {
+      challan = await prisma.salesChallan.findUnique({
+        where: { challanNumber: id },
+        include: {
+          customer: true,
+          createdBy: true,
+          items: true,
+        },
+      });
+    }
+
+    if (!challan) {
       res.status(404).json({ message: 'Sales Challan not found' });
       return;
     }
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const buffers: Buffer[] = [];
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="Challan_${challan.challanNumber}.pdf"`
-    );
-
-    doc.pipe(res);
+    doc.on('data', (chunk) => buffers.push(chunk));
+    doc.on('end', () => {
+      const pdfData = Buffer.concat(buffers);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', pdfData.length);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="Challan_${challan.challanNumber}.pdf"`
+      );
+      res.send(pdfData);
+    });
 
     // Header Company Info
     doc
