@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const challanController_js_1 = require("../controllers/challanController.js");
+const pdfController_js_1 = require("../controllers/pdfController.js");
+const auth_js_1 = require("../middleware/auth.js");
+const validate_js_1 = require("../middleware/validate.js");
+const router = (0, express_1.Router)();
+router.use(auth_js_1.authenticateJWT);
+router.get('/', challanController_js_1.getChallans);
+router.get('/:id', challanController_js_1.getChallanById);
+router.get('/:id/pdf', pdfController_js_1.exportChallanPDF);
+router.post('/', (0, auth_js_1.requireRole)(['ADMIN', 'SALES']), (0, validate_js_1.validateRequest)(challanController_js_1.challanSchema), challanController_js_1.createChallan);
+router.put('/:id/status', (0, auth_js_1.requireRole)(['ADMIN', 'SALES', 'ACCOUNTS']), (0, validate_js_1.validateRequest)(challanController_js_1.updateStatusSchema), challanController_js_1.updateChallanStatus);
+exports.default = router;

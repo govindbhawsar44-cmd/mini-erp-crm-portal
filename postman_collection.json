@@ -1,0 +1,222 @@
+{
+	"info": {
+		"_postman_id": "minierp-crm-collection-2026",
+		"name": "Mini ERP + CRM Operations Portal API Collection",
+		"description": "Complete REST API collection for Fundsroom Infotech Case Study",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login - Admin Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@erp.com\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Sales Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"sales@erp.com\",\n  \"password\": \"sales123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Get Current Session User (/auth/me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "me"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Customer CRM",
+			"item": [
+				{
+					"name": "Get Customers List (Paginated & Filtered)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/customers?search=&status=ACTIVE&page=1&limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "customers"],
+							"query": [
+								{ "key": "search", "value": "" },
+								{ "key": "status", "value": "ACTIVE" },
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "10" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Vikas Mehta\",\n  \"mobile\": \"+91 9988776655\",\n  \"email\": \"vikas@mehtatraders.in\",\n  \"businessName\": \"Mehta Industrial Supplies\",\n  \"gstNumber\": \"24CCCC1234C1Z9\",\n  \"customerType\": \"DISTRIBUTOR\",\n  \"address\": \"78 GIDC Phase 3, Ankleshwar, Gujarat\",\n  \"status\": \"LEAD\",\n  \"followUpDate\": \"2026-08-20\",\n  \"notes\": \"Initial inquiry for quarterly pipe fittings order.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/customers",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "customers"]
+						}
+					}
+				},
+				{
+					"name": "Add Follow-up Note to Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"note\": \"Sent revised quotation with 5% volume discount.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/customers/:id/notes",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "customers", ":id", "notes"],
+							"variable": [
+								{ "key": "id", "value": "CUSTOMER_ID_HERE" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Product & Stock Inventory",
+			"item": [
+				{
+					"name": "Get Products (Catalog & Low Stock Filter)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products?lowStock=false&page=1&limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products"],
+							"query": [
+								{ "key": "lowStock", "value": "false" },
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "10" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Manual Stock Adjustment (IN/OUT Log)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantityChanged\": 25,\n  \"movementType\": \"IN\",\n  \"reason\": \"Vendor Inward Receipt PO #4091\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/:id/stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", ":id", "stock"],
+							"variable": [
+								{ "key": "id", "value": "PRODUCT_ID_HERE" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Sales Challans & PDF Invoices",
+			"item": [
+				{
+					"name": "Create Sales Challan (Atomic Stock Check & Snapshot)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerId\": \"CUSTOMER_ID_HERE\",\n  \"status\": \"CONFIRMED\",\n  \"items\": [\n    {\n      \"productId\": \"PRODUCT_ID_HERE\",\n      \"quantity\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/challans",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "challans"]
+						}
+					}
+				},
+				{
+					"name": "Export Challan PDF Invoice",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/challans/:id/pdf",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "challans", ":id", "pdf"],
+							"variable": [
+								{ "key": "id", "value": "CHALLAN_ID_HERE" }
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:5000" },
+		{ "key": "authToken", "value": "YOUR_JWT_TOKEN_HERE" }
+	]
+}

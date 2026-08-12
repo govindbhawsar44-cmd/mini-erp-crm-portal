@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String             @id @default(uuid())
+  name         String
+  email        String             @unique
+  passwordHash String
+  role         String             // "ADMIN", "SALES", "WAREHOUSE", "ACCOUNTS"
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  followUpNotes FollowUpNote[]
+  stockLogs     StockMovementLog[]
+  challans      SalesChallan[]
+}
+
+model Customer {
+  id           String         @id @default(uuid())
+  name         String
+  mobile       String
+  email        String
+  businessName String
+  gstNumber    String?
+  customerType String         // "RETAIL", "WHOLESALE", "DISTRIBUTOR"
+  address      String
+  status       String         @default("LEAD") // "LEAD", "ACTIVE", "INACTIVE"
+  followUpDate DateTime?
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  followUpNotes FollowUpNote[]
+  challans      SalesChallan[]
+}
+
+model FollowUpNote {
+  id          String   @id @default(uuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  note        String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Product {
+  id            String             @id @default(uuid())
+  name          String
+  sku           String             @unique
+  category      String
+  unitPrice     Float
+  currentStock  Int
+  minStockAlert Int
+  location      String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  stockLogs    StockMovementLog[]
+  challanItems ChallanItem[]
+}
+
+model StockMovementLog {
+  id              String   @id @default(uuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantityChanged Int
+  movementType    String   // "IN", "OUT"
+  reason          String
+  createdById     String
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+}
+
+model SalesChallan {
+  id            String        @id @default(uuid())
+  challanNumber String        @unique
+  customerId    String
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  totalQuantity Int
+  totalAmount   Float
+  status        String        @default("DRAFT") // "DRAFT", "CONFIRMED", "CANCELLED"
+  createdById   String
+  createdBy     User          @relation(fields: [createdById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items ChallanItem[]
+}
+
+model ChallanItem {
+  id          String       @id @default(uuid())
+  challanId   String
+  challan     SalesChallan @relation(fields: [challanId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id])
+  productName String       // Snapshot field
+  sku         String       // Snapshot field
+  unitPrice   Float        // Snapshot field
+  quantity    Int
+  subtotal    Float
+}

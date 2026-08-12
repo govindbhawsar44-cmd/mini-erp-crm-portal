@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=file:./dev.db
+      - JWT_SECRET=mini_erp_super_secret_jwt_key_2026
+      - NODE_ENV=production
+    volumes:
+      - backend-data:/app/prisma
+
+volumes:
+  backend-data:
