@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Live Render Backend API URL
 const renderBackendUrl = 'https://mini-erp-crm-portal-4bg4.onrender.com';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL
