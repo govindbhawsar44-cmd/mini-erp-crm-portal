@@ -3,116 +3,111 @@ import PDFDocument from 'pdfkit';
 import { prisma } from '../utils/prisma.js';
 
 export const exportChallanPDF = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  const challan = await prisma.salesChallan.findUnique({
-    where: { id },
-    include: {
-      customer: true,
-      createdBy: true,
-      items: true,
-    },
-  });
-
-  if (!challan) {
-    res.status(404).json({ message: 'Sales Challan not found' });
-    return;
-  }
-
-  const doc = new PDFDocument({ margin: 50 });
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="Challan_${challan.challanNumber}.pdf"`
-  );
-
-  doc.pipe(res);
-
-  // Header Company Info
-  doc
-    .fillColor('#1E293B')
-    .fontSize(20)
-    .text('MINI ERP & CRM OPERATIONS', { align: 'left' })
-    .fontSize(10)
-    .fillColor('#64748B')
-    .text('Industrial & Distribution Portal', { align: 'left' })
-    .moveDown(1.5);
-
-  // Challan Title & Details Box
-  doc
-    .fillColor('#0F172A')
-    .fontSize(16)
-    .text(`SALES CHALLAN / INVOICE`, { underline: true })
-    .fontSize(10)
-    .moveDown(0.5);
-
-  doc
-    .fillColor('#334155')
-    .text(`Challan Number: ${challan.challanNumber}`)
-    .text(`Status: ${challan.status}`)
-    .text(`Date: ${new Date(challan.createdAt).toLocaleDateString()}`)
-    .text(`Created By: ${challan.createdBy.name} (${challan.createdBy.role})`)
-    .moveDown(1);
-
-  // Customer Information Box
-  doc
-    .fillColor('#0F172A')
-    .fontSize(12)
-    .text('CUSTOMER DETAILS', { underline: true })
-    .fontSize(10)
-    .fillColor('#334155')
-    .text(`Customer Name: ${challan.customer.name}`)
-    .text(`Business Name: ${challan.customer.businessName}`)
-    .text(`GST Number: ${challan.customer.gstNumber || 'N/A'}`)
-    .text(`Mobile: ${challan.customer.mobile}`)
-    .text(`Address: ${challan.customer.address}`)
-    .moveDown(1.5);
-
-  // Items Table Header
-  doc.fillColor('#0F172A').fontSize(11).text('ITEMS LIST', { underline: true }).moveDown(0.5);
-
-  // Table Columns
-  let y = doc.y;
-  doc.fontSize(10).fillColor('#1E293B');
-  doc.text('Item Description', 50, y, { width: 200 });
-  doc.text('SKU', 250, y, { width: 90 });
-  doc.text('Unit Price', 340, y, { width: 70, align: 'right' });
-  doc.text('Qty', 420, y, { width: 50, align: 'right' });
-  doc.text('Subtotal', 480, y, { width: 70, align: 'right' });
-
-  doc
-    .moveTo(50, y + 15)
-    .lineTo(550, y + 15)
-    .stroke('#CBD5E1');
-
-  y += 25;
-
-  // Table Items
-  challan.items.forEach((item) => {
-    doc.fillColor('#475569');
-    doc.text(item.productName, 50, y, { width: 200 });
-    doc.text(item.sku, 250, y, { width: 90 });
-    doc.text(`INR ${item.unitPrice.toFixed(2)}`, 340, y, { width: 70, align: 'right' });
-    doc.text(item.quantity.toString(), 420, y, { width: 50, align: 'right' });
-    doc.text(`INR ${item.subtotal.toFixed(2)}`, 480, y, { width: 70, align: 'right' });
-    y += 20;
-  });
-
-  doc.moveTo(50, y).lineTo(550, y).stroke('#CBD5E1');
-  y += 15;
-
-  // Summary Totals
-  doc.fillColor('#0F172A').fontSize(11);
-  doc.text(`Total Quantity: ${challan.totalQuantity}`, 340, y, { width: 200, align: 'right' });
-  y += 18;
-  doc
-    .fontSize(12)
-    .fillColor('#0284C7')
-    .text(`Total Amount: INR ${challan.totalAmount.toFixed(2)}`, 340, y, {
-      width: 200,
-      align: 'right',
+    const challan = await prisma.salesChallan.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        createdBy: true,
+        items: true,
+      },
     });
 
-  doc.end();
+    if (!challan) {
+      res.status(404).json({ message: 'Sales Challan not found' });
+      return;
+    }
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="Challan_${challan.challanNumber}.pdf"`
+    );
+
+    doc.pipe(res);
+
+    // Header Company Info
+    doc
+      .fillColor('#1E293B')
+      .fontSize(18)
+      .text('MINI ERP & CRM OPERATIONS', 50, 40)
+      .fontSize(9)
+      .fillColor('#64748B')
+      .text('Wholesale & Industrial Distribution Portal', 50, 62);
+
+    // Challan Title & Details
+    doc
+      .fillColor('#0F172A')
+      .fontSize(13)
+      .text(`SALES DISPATCH CHALLAN / INVOICE`, 50, 90)
+      .fontSize(9)
+      .fillColor('#334155')
+      .text(`Challan Number: ${challan.challanNumber}`, 50, 110)
+      .text(`Status: ${challan.status}`, 50, 122)
+      .text(`Date: ${new Date(challan.createdAt).toLocaleDateString()}`, 50, 134)
+      .text(`Created By: ${challan.createdBy?.name || 'System'} (${challan.createdBy?.role || 'User'})`, 50, 146);
+
+    // Customer Details
+    doc
+      .fillColor('#0F172A')
+      .fontSize(11)
+      .text('CUSTOMER DETAILS', 300, 90)
+      .fontSize(9)
+      .fillColor('#334155')
+      .text(`Business: ${challan.customer.businessName}`, 300, 110)
+      .text(`Contact: ${challan.customer.name}`, 300, 122)
+      .text(`GST: ${challan.customer.gstNumber || 'N/A'}`, 300, 134)
+      .text(`Mobile: ${challan.customer.mobile}`, 300, 146)
+      .text(`Address: ${challan.customer.address}`, 300, 158, { width: 240 });
+
+    doc.moveTo(50, 190).lineTo(550, 190).stroke('#CBD5E1');
+
+    // Table Header
+    let y = 200;
+    doc.fillColor('#0F172A').fontSize(9);
+    doc.text('Item Description', 50, y, { width: 200 });
+    doc.text('SKU', 250, y, { width: 80 });
+    doc.text('Unit Price', 330, y, { width: 70, align: 'right' });
+    doc.text('Qty', 410, y, { width: 40, align: 'right' });
+    doc.text('Subtotal', 460, y, { width: 90, align: 'right' });
+
+    doc.moveTo(50, y + 14).lineTo(550, y + 14).stroke('#E2E8F0');
+    y += 22;
+
+    // Table Items
+    challan.items.forEach((item) => {
+      doc.fillColor('#334155').fontSize(9);
+      doc.text(item.productName, 50, y, { width: 200 });
+      doc.text(item.sku, 250, y, { width: 80 });
+      doc.text(`INR ${item.unitPrice.toFixed(2)}`, 330, y, { width: 70, align: 'right' });
+      doc.text(item.quantity.toString(), 410, y, { width: 40, align: 'right' });
+      doc.text(`INR ${item.subtotal.toFixed(2)}`, 460, y, { width: 90, align: 'right' });
+      y += 18;
+    });
+
+    doc.moveTo(50, y + 5).lineTo(550, y + 5).stroke('#CBD5E1');
+    y += 15;
+
+    // Summary Totals
+    doc.fillColor('#0F172A').fontSize(10);
+    doc.text(`Total Dispatched Quantity: ${challan.totalQuantity} Units`, 50, y);
+    doc
+      .fontSize(11)
+      .fillColor('#0284C7')
+      .text(`Total Amount: INR ${challan.totalAmount.toFixed(2)}`, 350, y, {
+        width: 200,
+        align: 'right',
+      });
+
+    doc.end();
+  } catch (err: any) {
+    console.error('PDF Generation Error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate PDF', error: err.message });
+    }
+  }
 };
